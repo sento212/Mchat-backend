@@ -1,0 +1,6 @@
+python -m venv my_env = create virtual env my_env bisa diganti sesuka hati
+my_env\Scripts\activate = aktivasi virtual env
+deactivate = matikan virtual env
+pip freeze = check pacage apa saja yang terinstall
+pip freeze > requirement.txt = create requirement.txt
+pip install -r requirement.txt = run requirement 
