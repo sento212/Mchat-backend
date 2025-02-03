@@ -1,7 +1,7 @@
 from dao.add_friend_DAO import daftar_temen, show_temen, dafter_temen, addshow
 from flask import request 
 from flask_jwt_extended import jwt_required, get_jwt_identity
-import jwt, sys, asyncio,traceback
+import jwt, sys, asyncio,traceback, json
 from urllib.parse import urlparse, parse_qs
  
 
@@ -62,4 +62,9 @@ class addFriendController:
             current_module_file = sys.modules[__name__].__file__
             exc_type, exc_value, exc_traceback = sys.exc_info()
             line = sys.exc_info()[-1].tb_lineno
+            hasil_check = {
+                'status' : 401,
+                'message' : "Token Expired" ,
+                } 
+            await websocket.send(json.dumps(hasil_check, default=str)) 
             print(f"Websocket error {exc_type} on {current_module_file} at line {line}, {exc_value}")

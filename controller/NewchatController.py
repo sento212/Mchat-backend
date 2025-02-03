@@ -1,7 +1,7 @@
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask import request
 from dao.new_chat_DAO import add_chat, list_chat, show_save
-import jwt, asyncio, sys, traceback
+import jwt, asyncio, sys, traceback, json
 from urllib.parse import urlparse, parse_qs
 
 class newchatController:
@@ -43,4 +43,9 @@ class newchatController:
             current_module_file = sys.modules[__name__].__file__
             exc_type, exc_value, exc_traceback = sys.exc_info()
             line = sys.exc_info()[-1].tb_lineno
+            hasil_check = {
+                'status' : 401,
+                'message' : "Token Expired" ,
+                } 
+            await websocket.send(json.dumps(hasil_check, default=str)) 
             print(f"Websocket error {exc_type} on {current_module_file} at line {line}, {exc_value}")

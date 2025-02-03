@@ -149,6 +149,7 @@ async def addshow(websocket,user):
                     hasil_check = {'status' : 400, 'message' : "tipe tidak ada"}
                     await websocket.send(json.dumps(hasil_check, default=str)) 
         else:
+            await websocket.send(json.dumps(CheckConn, default=str)) 
             raise Exception(CheckConn)
     except Exception as e:
         Sqlbuilder.Rollback('Mchat')
@@ -197,6 +198,7 @@ async def dafter_temen(websocket,user):
                         await websocket.send(json.dumps(hasil_check, default=str))           
                     # await asyncio.sleep(5)
         else:
+            await websocket.send(json.dumps(CheckConn, default=str)) 
             raise Exception(CheckConn)
     except Exception as e:
         Sqlbuilder.Rollback('Mchat')

@@ -12,10 +12,16 @@ class loginController:
             caches = load_from_file("list_token")
             name = request.form.get('user',None)
             Pass = request.form.get('pass',None)
+            cari = request.args.get('cari',None)
+            if(name is None or Pass is None):
+                return {
+                    'status' : 400,
+                    'message' : "Username atau Password kosong" 
+                    } 
             acess_token = create_access_token(identity={'user' : name, 'login_status' : True})
             hasil = login_data(name,Pass,acess_token)
             if(hasil['status'] == 400):
-                raise Exception(hasil['message'])
+                return hasil
             if(caches != None):
                 caches.append(hasil['key_token'])
                 list_caches = caches

@@ -77,6 +77,7 @@ async def show_save(websocket,conv_id,user):
                 hasil_check = {'status' : 400, 'message' : "akun tidak ada!!!"}
                 await websocket.send(json.dumps(hasil_check, default=str)) 
         else:
+            await websocket.send(json.dumps(CheckConn, default=str)) 
             raise Exception(CheckConn)
     except Exception as e:
         Sqlbuilder.Rollback('Mchat')
@@ -119,6 +120,7 @@ async def list_chat(websocket,conv_id,user):
                             # await dafter_temen(websocket,user)         
                         # await asyncio.sleep(0.5)
             else:
+                await websocket.send(json.dumps(CheckConn, default=str)) 
                 raise Exception(CheckConn)
         else:
             hasil_check = {'status' : 400, 'message' : "akun tidak ada"}
