@@ -5,6 +5,7 @@ from index import routing
 from settings.authentication import Authentication
 from flask_caching import Cache
 from settings.caches import save_to_file, load_from_file
+# from waitress import serve
 
 
 config = {
@@ -29,6 +30,7 @@ def run(path):
     try:
         token = request.headers.get('Authorization', None)
         if token != None:
+            print(1)
             caches = load_from_file("list_token")
             token = token[7:]  
             if(caches.index(token)):      
@@ -38,14 +40,15 @@ def run(path):
             hasil = routing.Run(path = path,route = request.method, cache = cache)
             return hasil
     except Exception as e:
+        print(e)
         return {
                 'status' : 400,
                 'message' : "Token Expired" ,
                 } 
 
     
-if __name__ == '__main__':
-    # flask_thread = threading.Thread(target=app.run)
-    # flask_thread.start()
-    # asyncio.run(main())
-    app.run(debug=True, host='0.0.0.0')
+# if __name__ == '__main__':
+#     # flask_thread = threading.Thread(target=app.run)
+#     # flask_thread.start()
+#     # asyncio.run(main())
+#     app.run(debug=True, host='0.0.0.0')

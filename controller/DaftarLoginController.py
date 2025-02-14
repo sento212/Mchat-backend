@@ -31,6 +31,7 @@ class daftarloginController:
 
     def PUT(self, *args, **kwargs):
         try:
+            print(12, 'yeah')
             name = request.form.get('user',None)
             Pass = request.form.get('pass',None)
             if(name is None or Pass is None):

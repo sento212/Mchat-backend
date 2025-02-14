@@ -24,11 +24,20 @@ class Router:
                     request = getattr(intence(),method)
                     return request(cache = cache)
                 else:
-                    return render_template('404.html')
+                    return {
+                'status' : 400,
+                'message' : "link tidak ada" 
+                } 
             else:
-                return render_template('404.html')
+                return {
+                'status' : 400,
+                'message' : "link tidak ada" 
+                } 
         else:
-            return render_template('404.html')
+            return {
+                'status' : 400,
+                'message' : "link tidak ada" 
+                } 
         
     async def Run_websockets(self, **kwargs):
         try:

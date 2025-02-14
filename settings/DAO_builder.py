@@ -6,7 +6,7 @@ import asyncio
 class Dao_builder:
 
     def __init__(self,connection_list):
-        Chatconn = Conn('127.0.0.1','postgres','800212','Mchat', '5432')
+        Chatconn = Conn('152.42.226.71','postgres','cfu800212','Mchat', '5432')
         self.Conn = {}
         if 'Mchat' in connection_list:
             hasil = Chatconn.get_conn()
