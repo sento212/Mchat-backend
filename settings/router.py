@@ -14,6 +14,10 @@ class Router:
         route = kwargs.get('path')
         method = kwargs.get('route')
         cache = kwargs.get('cache')
+        for key in self.path:
+            index = route.find(key)
+            if index != -1:
+                route = route[index:]
         if route in self.path:
             obj = self.path[route]['class']
             modul = self.path[route]['modul']
@@ -44,6 +48,12 @@ class Router:
             route = kwargs.get('path')
             method = kwargs.get('route')
             realroute = kwargs.get('rawroute')
+            for key in self.path:
+                index = route.find(key)
+                if index != -1:
+                    route = route[index:]
+                    index2 = realroute.find(route)
+                    realroute = realroute[index2:]
             if route in self.path:
                 obj = self.path[route]['class']
                 modul = self.path[route]['modul']

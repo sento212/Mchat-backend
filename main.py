@@ -11,7 +11,7 @@ async def handler(websocket, path):
         parsed_url = urlparse(path)
         params = parse_qs(parsed_url.query)
         token = params.get('Authorization', 400)[0]
-        url = "http://152.42.226.71:81/DaftarLogin"
+        url = "https://sento.my.id/sento/backend/DaftarLogin"
         payload = {'token': token}
         response = requests.request("POST", url, data=payload)
         if(json.loads(response.text)['status'] == 200): 
@@ -27,7 +27,6 @@ async def handler(websocket, path):
         await websocket.send(json.dumps(hasil_check, default=str)) 
 
 async def main():
-    # Set the stop condition when receiving SIGTERM.
     loop = asyncio.get_running_loop()
     stop = loop.create_future()
     loop.add_signal_handler(signal.SIGTERM, stop.set_result, None)
@@ -43,24 +42,24 @@ async def main():
 # async def main():
 #     # async with websockets.serve(handler, "localhost", 8765, ping_interval=20, ping_timeout=10):
 #     #     await asyncio.Future() 
-#     # server =  await websockets.serve(handler, "0.0.0.0", 8000, ping_interval=20, ping_timeout=10)
-#     loop = asyncio.get_running_loop()
-#     stop = loop.create_future()
-#     loop.add_signal_handler(signal.SIGTERM, stop.set_result, None)
+#     server =  await websockets.serve(handler, "0.0.0.0", 8000, ping_interval=20, ping_timeout=10)
+#     # loop = asyncio.get_running_loop()
+#     # stop = loop.create_future()
+#     # loop.add_signal_handler(signal.SIGTERM, stop.set_result, None)
 
-#     async with unix_serve(
-#         handler,
-#         path=f"proxy/{os.environ['SUPERVISOR_PROCESS_NAME']}.sock",
-#     ):
-#         await stop
-    # try:
-    #     print("Server is running...")
-    #     await server.wait_closed()
-    # except asyncio.CancelledError:
-    #     print("Server is shutting down...")
-    #     server.close()
-    #     os._exit(0)
-    #     await server.wait_closed()
+#     # async with unix_serve(
+#     #     handler,
+#     #     path=f"proxy/{os.environ['SUPERVISOR_PROCESS_NAME']}.sock",
+#     # ):
+#     #     await stop
+#     try:
+#         print("Server is running...")
+#         await server.wait_closed()
+#     except asyncio.CancelledError:
+#         print("Server is shutting down...")
+#         server.close()
+#         os._exit(0)
+#         await server.wait_closed()
         
 
 if __name__ == '__main__':

@@ -8,13 +8,12 @@ RUN pip install --no-cache-dir -r requirement.txt
 
 #buat flask
 # RUN pip install gunicorn
-
 # EXPOSE 8000
-
 # CMD [ "python", "main.py" ]
 # CMD ["flask", "run", "--host=0.0.0.0"]
 # CMD ["gunicorn","--bind","0.0.0.0:8000","app:app"]
 
+#buat websocket
 RUN pip install supervisor
 
 RUN apt-get update && apt-get install -y supervisor && apt-get install -y haproxy
@@ -29,7 +28,3 @@ EXPOSE 8080
 
 CMD ["supervisord", "-c", "/etc/supervisor/supervisord.conf"]
 
-# RUN supervisord -c /etc/supervisor/supervisord.conf
-
-# CMD ["python", "-m", "websockets", "ws://localhost:8080/"]
-# python -m websockets ws://localhost:8080/
