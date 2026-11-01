@@ -126,15 +126,29 @@ async def addshow(websocket,user):
                         hasil_check = {'status' : 400, 'message' : "akun sudah berteman!!!"}
                         await websocket.send(json.dumps(hasil_check, default=str))  
                 elif(message['tipe'] == 'get'):
-                    query = """SELECT ion.conversation_id, case when ion.name_enemy = %(username)s THEN ion.name ELSE ion.name_enemy END AS name_enemy, ca.chat_inside, TO_CHAR(ca.entry_date, 'HH24-MI') entry_date
-                                    from conversation ion  left JOIN chat ca
+                    query = """SELECT ion.conversation_id, 
+                                    case when 
+                                        ion.name_enemy = %(username)s 
+                                    THEN ion.name 
+                                    ELSE ion.name_enemy 
+                                    END AS name_enemy, 
+                                    ca.chat_inside, 
+                                    TO_CHAR(ca.entry_date, 'HH24-MI') entry_date
+                                from conversation ion  left JOIN chat ca
                                     ON ion.conversation_id = ca.conversation_id
-                                    WHERE (ca.entry_date = (
+                                WHERE (ca.entry_date = (
                                     SELECT MAX(cab.entry_date) from chat cab 
                                     where cab.conversation_id = ion.conversation_id
                                     )
                                     OR ca.entry_date IS null)
                                     and (ion.NAME = %(username)s or ion.name_enemy = %(username)s)
+                                    and ion.conversation_id  <> case when 
+                                            ion.name_enemy = %(username)s 
+                                        and
+                                            ca.chat_inside is null
+                                        then ion.conversation_id 
+                                        else 'aman'
+                                        end
                                     order BY CASE WHEN  ca.entry_date IS not NULL THEN ca.entry_date 
 												ELSE ion.entry_date end desc""" 
                     params = {'username': user}
@@ -189,8 +203,6 @@ async def dafter_temen_bener(websocket,user):
                         await Sqlbuilder.Rollback('Mchat')
                     if(hasil_check['data'][0] != banyak):
                         banyak = hasil_check['data'][0]
-       
-
         else:
             await websocket.send(json.dumps(CheckConn, default=str)) 
             raise Exception(CheckConn)

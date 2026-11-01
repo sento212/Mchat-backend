@@ -32,7 +32,7 @@ async def main():
         # 2. Bind lala using functools.partial before passing it to add_listener
         bound_callback = functools.partial(handle_notification, lala=my_lala_value)
         
-        await Conn.add_listener('chat_channel_comvid_2026-10-09 14:32:23.407834', bound_callback)
+        await Conn.add_listener('chat_channel_sento1', bound_callback)
         print("Listening for real-time inserts on 'chat_channel'... (Press Ctrl+C to exit)")
 
     await hear_notif(conn)
