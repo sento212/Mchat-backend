@@ -1,54 +1,53 @@
-import sshtunnel
-import paramiko, os
+import asyncio
+import json
+import asyncpg
+import functools
 
-current_directory = os.getcwd()
-ppk_dir = current_directory + r'\settings\test3.pem'
+async def main():
+    # Connect to your PostgreSQL database (using your local tunnel port 5555)
+    print("Connecting to database listener...")
+    conn = await asyncpg.connect(
+        user="sento",
+        password="cfu800212345",
+        database="mchat",
+        host="localhost",
+        port=5555
+    )
 
-if os.path.exists(ppk_dir):
-    print(f"The file {ppk_dir} exists.")
-else:
-    print(f"The file {ppk_dir} does not exist.")
-# --- Input Values (REPLACE THESE WITH YOUR ACTUAL VALUES) ---
-REMOTE_SERVER_IP = "152.42.226.71"  # IP or hostname of your SSH jump host
-SSH_USERNAME = "root"  # Your username on the jump host
-SSH_PRIVATE_KEY = ppk_dir  # Path to your *OpenSSH* private key file (not .ppk)
-SSH_PRIVATE_KEY_PASSWORD = "cfu800212"  # Passphrase for your private key (or "" if none)
-PRIVATE_SERVER_IP = "localhost"  # IP of the server you want to reach *through* the tunnel
-PRIVATE_SERVER_PORT = 443  # The port of the server you want to reach
-LOCAL_BIND_PORT = 10022  # Local port for the tunnel (can usually be left as is)
+    # Define the callback function that triggers instantly when a notification arrives
+    def handle_notification(connection, pid, channel, payload, lala):
+        print('pepekkkkkk')
+        # The payload arrives as a JSON string from pg_notify
+        data = json.loads(payload)
 
-try:
-    with sshtunnel.open_tunnel(
-        (REMOTE_SERVER_IP, 22),  # SSH server address and port (22 is the default SSH port)
-        ssh_username=SSH_USERNAME,
-        ssh_pkey=SSH_PRIVATE_KEY,
-        ssh_private_key_password=SSH_PRIVATE_KEY_PASSWORD,
-        remote_bind_address=(PRIVATE_SERVER_IP, PRIVATE_SERVER_PORT),  # Destination server and port
-        local_bind_address=('0.0.0.0', LOCAL_BIND_PORT)) as tunnel:  # Local port to listen on
+        print(f"Extra variable lala says: {lala}")
+        
+        print(f"\n[REAL-TIME ALERT] New row inserted!")
+        print(f"  -> ID      : {data['id']}")
 
-        # --- SSH Connection through the Tunnel ---
-        client = paramiko.SSHClient()
-        client.load_system_host_keys()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # Use with caution in production
-        client.connect('127.0.0.1', LOCAL_BIND_PORT)  # Connect to the *local* end of the tunnel
+    async def hear_notif(Conn):
+    # Register the listener on the 'chat_channel' channel
+        my_lala_value = "Hello from the controller!"
+        
+        # 2. Bind lala using functools.partial before passing it to add_listener
+        bound_callback = functools.partial(handle_notification, lala=my_lala_value)
+        
+        await Conn.add_listener('chat_channel_comvid_2026-10-09 14:32:23.407834', bound_callback)
+        print("Listening for real-time inserts on 'chat_channel'... (Press Ctrl+C to exit)")
 
-        # --- Example Operations with the SSH Client ---
-        # Get the RSA key fingerprint to check it.
-        key = client.get_transport().getpeerkey()
-        if key.get_name() == 'ssh-rsa':
-            fingerprint = paramiko.util.format_fingerprint(key)
-            print(f"RSA Fingerprint: {fingerprint}")
-        else:
-            print(f"Key type: {key.get_name()}")
+    await hear_notif(conn)
 
-        stdin, stdout, stderr = client.exec_command("ls -l")  # Example command: list files
+    try:
+        # Keep the script running indefinitely to listen for pushes
+        while True:
+            await asyncio.sleep(3600)
+    except asyncio.CancelledError:
+        pass
+    finally:
+        await conn.close()
 
-        for line in stdout:  # Print the command's output
-            print(line.strip())
-
-        client.close()  # Close the SSH connection
-
-    print('SSH Tunnel and Connection Successful!')
-
-except Exception as e:
-    print(f"An error occurred: {e}")
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\nListener closed safely.")

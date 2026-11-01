@@ -1,19 +1,19 @@
-from dao.add_friend_DAO import daftar_temen, show_temen, dafter_temen, addshow
+from dao.add_friend_DAO import daftar_temen, show_temen, dafter_temen_bener, addshow
 from flask import request 
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import jwt, sys, asyncio,traceback, json
 from urllib.parse import urlparse, parse_qs
- 
+from settings.DAO_builder import Dao_builder
 
 class addFriendController:
 
     @jwt_required()
-    def PUT(self ,*args, **kwargs):
+    async def PUT(self ,*args, **kwargs):
         try:
             current_user = get_jwt_identity()
             main_user = current_user['user']
             name_temen = request.form.get('name_temen',None)
-            hasil = daftar_temen(main_user,name_temen)
+            hasil = await daftar_temen(main_user,name_temen)
             if(hasil['status'] == 400):
                 return hasil
             return hasil
@@ -26,14 +26,17 @@ class addFriendController:
                 'status' : 400,
                 'message' : "Gagal mendapatkan data" 
                 } 
+        finally:
+            Sqlbuilder = Dao_builder()
+            await Sqlbuilder.close_conn()
         
     @jwt_required()
-    def GET(self, *args, **kwargs):
+    async def GET(self, *args, **kwargs):
         try:
             current_user = get_jwt_identity()
             main_user = current_user['user']
             cari = request.args.get('cari',None)
-            hasil = show_temen(main_user, cari)
+            hasil = await show_temen(main_user, cari)
             if(hasil['status'] == 400):
                 return hasil
             return hasil
@@ -46,6 +49,9 @@ class addFriendController:
                 'status' : 400,
                 'message' : "Gagal mendapatkan data" 
                 } 
+        finally:
+            Sqlbuilder = Dao_builder()
+            await Sqlbuilder.close_conn()
   
     async def WSC(self, websocket, path):
         try:
@@ -55,7 +61,7 @@ class addFriendController:
             payload = jwt.decode(token, 'your-secret-key', algorithms=['HS256'])
             user = payload['sub']['user']
             await asyncio.gather(
-            dafter_temen(websocket,user),
+            dafter_temen_bener(websocket,user),
             addshow(websocket,user)
             )
         except Exception as e:
@@ -68,3 +74,6 @@ class addFriendController:
                 } 
             await websocket.send(json.dumps(hasil_check, default=str)) 
             print(f"Websocket error {exc_type} on {current_module_file} at line {line}, {exc_value}")
+        finally:
+                    Sqlbuilder = Dao_builder()
+                    await Sqlbuilder.close_conn()

@@ -10,7 +10,7 @@ class Router:
     def AddRoute(self, link, modul, object):
         self.path[link] = {'class' : object, 'modul' : modul}
 
-    def Run(self, **kwargs):
+    async def Run(self, **kwargs):
         route = kwargs.get('path')
         method = kwargs.get('route')
         cache = kwargs.get('cache')
@@ -26,7 +26,7 @@ class Router:
                 intence = getattr(module,obj)
                 if hasattr(intence(),method):
                     request = getattr(intence(),method)
-                    return request(cache = cache)
+                    return await request(cache = cache)
                 else:
                     return {
                 'status' : 400,
