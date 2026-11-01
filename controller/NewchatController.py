@@ -3,17 +3,18 @@ from flask import request
 from dao.new_chat_DAO import add_chat, list_chat, show_save
 import jwt, asyncio, sys, traceback, json
 from urllib.parse import urlparse, parse_qs
+from settings.DAO_builder import Dao_builder
 
 class newchatController:
 
     @jwt_required()
-    def PUT(self, *args, **kwargs):
+    async def PUT(self, *args, **kwargs):
         try:
             current_user = get_jwt_identity()
             main_user = current_user['user']
             chat = request.form.get('chat',None)
             conv_id = request.form.get('conversation_id',None)
-            hasil = add_chat(main_user,conv_id,chat)
+            hasil = await add_chat(main_user,conv_id,chat)
             if(hasil['status'] == 400):
                 return hasil
             return hasil
@@ -26,6 +27,9 @@ class newchatController:
                 'status' : 400,
                 'message' : "Gagal mendapatkan data" 
                 } 
+        finally:
+                    Sqlbuilder = Dao_builder()
+                    await Sqlbuilder.close_conn()
         
     async def WSC(self, websocket, path):
         try:
@@ -49,3 +53,8 @@ class newchatController:
                 } 
             await websocket.send(json.dumps(hasil_check, default=str)) 
             print(f"Websocket error {exc_type} on {current_module_file} at line {line}, {exc_value}")
+        finally:
+            Sqlbuilder = Dao_builder()
+            await Sqlbuilder.close_conn()
+
+

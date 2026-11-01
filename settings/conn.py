@@ -1,5 +1,6 @@
 import psycopg2
-
+import asyncpg
+import asyncio
 
 class Conn:
     def __init__(self, host, username, password, db_name, port):
@@ -10,15 +11,24 @@ class Conn:
         self.port = port
         self.hasil = self.get_conn()
 
-    def get_conn(self):
+    async def get_conn(self):
         try:
-            conn = psycopg2.connect(
-            dbname = self.db_name,
+            # conn = psycopg2.connect(
+            # dbname = self.db_name,
+            # user = self.username,
+            # password = self.password,
+            # host = self.host,
+            # port = self.port
+            # )
+
+            conn = await asyncpg.connect(
+            database = self.db_name,
             user = self.username,
             password = self.password,
             host = self.host,
             port = self.port
             )
+
             return {
                 'status' : 200,
                 'message' : 'connection establish',
