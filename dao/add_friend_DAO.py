@@ -1,6 +1,6 @@
 from settings.DAO_builder import Dao_builder
 from datetime import datetime
-import json
+import json, asyncio, functools
 import sys
 from datetime import timedelta
 # import asyncio
@@ -110,21 +110,51 @@ async def addshow(websocket,user):
                     query = """select count(name_enemy) jml from conversation where name = %(username)s and name_enemy =%(userenemy)s  """ 
                     params = {'username': user,'userenemy': nama_temen}
                     hasil_check = await Sqlbuilder.Select('Mchat', query, params)
-                    if(hasil_check['status'] == 400):
-                        await Sqlbuilder.Rollback('Mchat')
-
                     if(hasil_check['data'][0]['jml'] == 0):
                         hasil_check = Sqlbuilder.Select('Mchat', query, params)
                         convid = "comvid_"+str(datetime.now())
                         query = """Insert into Conversation(name,name_enemy,conversation_id) 
                                     values (%(name)s,%(name_enemy)s,%(convid)s)""" 
                         params = {'name': user,'name_enemy': nama_temen, 'convid' : convid}
-                        hasil = await Sqlbuilder.AsyncronusCall('ExecuteCommit','Mchat', query, params)
-                        if(hasil['status'] == 400):
-                            await Sqlbuilder.Rollback('Mchat')
+                        hasil = await Sqlbuilder.ExecuteCommit('Mchat', query, params)
+                        if(hasil['status'] == 200):
+                            bound_callback = functools.partial(show_chat, user = user, websocket = websocket, Sqlbuilder = Sqlbuilder)
+                            await Sqlbuilder.Conn['Mchat'].add_listener(f"chat_channel_{convid}", bound_callback)
+
+                            query = """SELECT ion.conversation_id, 
+                                            case when 
+                                                ion.name_enemy = %(username)s 
+                                            THEN ion.name 
+                                            ELSE ion.name_enemy 
+                                            END AS name_enemy, 
+                                            ca.chat_inside, 
+                                            TO_CHAR(ca.entry_date, 'HH24-MI') entry_date
+                                        from conversation ion  left JOIN chat ca
+                                            ON ion.conversation_id = ca.conversation_id
+                                        WHERE (ca.entry_date = (
+                                            SELECT MAX(cab.entry_date) from chat cab 
+                                            where cab.conversation_id = ion.conversation_id
+                                            )
+                                            OR ca.entry_date IS null)
+                                            and (ion.NAME = %(username)s or ion.name_enemy = %(username)s)
+                                            and ion.conversation_id  <> case when 
+                                                    ion.name_enemy = %(username)s 
+                                                    and
+	    								        ion.name != %(username)s  
+                                                and
+                                                    ca.chat_inside is null
+                                                then ion.conversation_id 
+                                                else 'aman'
+                                                end
+                                            order BY CASE WHEN  ca.entry_date IS not NULL THEN ca.entry_date 
+                                                        ELSE ion.entry_date end desc""" 
+                            params = {'username': user}
+                            hasil_check = await Sqlbuilder.Select('Mchat', query, params)
+                            await websocket.send(json.dumps(hasil_check, default=str))
                     else:
                         hasil_check = {'status' : 400, 'message' : "akun sudah berteman!!!"}
                         await websocket.send(json.dumps(hasil_check, default=str))  
+                        
                 elif(message['tipe'] == 'get'):
                     query = """SELECT ion.conversation_id, 
                                     case when 
@@ -144,6 +174,8 @@ async def addshow(websocket,user):
                                     and (ion.NAME = %(username)s or ion.name_enemy = %(username)s)
                                     and ion.conversation_id  <> case when 
                                             ion.name_enemy = %(username)s 
+                                        and
+	    								ion.name != %(username)s 
                                         and
                                             ca.chat_inside is null
                                         then ion.conversation_id 
@@ -172,37 +204,100 @@ async def addshow(websocket,user):
 
 
 async def show_chat(connection, pid, channel, payload, user, websocket, Sqlbuilder):
+
     data = json.loads(payload)
-    query = """SELECT ion.conversation_id, case when ion.name_enemy = %(username)s THEN ion.name ELSE ion.name_enemy END AS name_enemy, ca.chat_inside, TO_CHAR(ca.entry_date, 'HH24-MI') entry_date
-                from conversation ion  left JOIN chat ca
-                ON ion.conversation_id = ca.conversation_id
-                WHERE (ca.entry_date = (
-                SELECT MAX(cab.entry_date) from chat cab 
-                where cab.conversation_id = ion.conversation_id
-                )
-                OR ca.entry_date IS null)
-                and (ion.NAME = %(username)s or ion.name_enemy = %(username)s)
-                order BY CASE WHEN  ca.entry_date IS not NULL THEN ca.entry_date 
-                            ELSE ion.entry_date end desc""" 
+    query = """
+        SELECT ion.conversation_id, 
+            case when 
+                ion.name_enemy = %(username)s 
+            THEN ion.name 
+            ELSE ion.name_enemy 
+            END AS name_enemy, 
+            ca.chat_inside, 
+            TO_CHAR(ca.entry_date, 'HH24-MI') entry_date
+        from conversation ion  left JOIN chat ca
+            ON ion.conversation_id = ca.conversation_id
+        WHERE (ca.entry_date = (
+            SELECT MAX(cab.entry_date) from chat cab 
+            where cab.conversation_id = ion.conversation_id
+            )
+            OR ca.entry_date IS null)
+            and (ion.NAME = %(username)s or ion.name_enemy = %(username)s)
+            and ion.conversation_id  <> case when 
+                    ion.name_enemy = %(username)s 
+                and
+                    ion.name != %(username)s
+                and
+                    ca.chat_inside is null
+                then ion.conversation_id 
+                else 'aman'
+                end
+            order BY CASE WHEN  ca.entry_date IS not NULL THEN ca.entry_date 
+                        ELSE ion.entry_date end desc
+                        """ 
     params = {'username': user}
+
     hasil_check = await Sqlbuilder.Select('Mchat', query, params)
     await websocket.send(json.dumps(hasil_check, default=str))    
 
  
 async def dafter_temen_bener(websocket,user):
     try:
-        banyak = 0
         Sqlbuilder = Dao_builder()
         CheckConn = await Sqlbuilder.get_conn(['Mchat'])
         if(CheckConn['status'] == 200):
-            while True:
-                    query = """SELECT COUNT(1) from conversation where NAME = %(username)s or name_enemy = %(username)s""" 
+                    query = """SELECT COUNT(1) jml from conversation where NAME = %(username)s or name_enemy = %(username)s""" 
                     params = {'username': user}
                     hasil_check = await Sqlbuilder.Select('Mchat', query, params)
-                    if(hasil_check['status'] == 400):
-                        await Sqlbuilder.Rollback('Mchat')
-                    if(hasil_check['data'][0] != banyak):
-                        banyak = hasil_check['data'][0]
+
+                    banyak = hasil_check['data'][0]
+                    if banyak['jml'] > 1:
+                                query = """
+                                SELECT ion.conversation_id, 
+                                    case when 
+                                        ion.name_enemy = %(username)s 
+                                    THEN ion.name 
+                                    ELSE ion.name_enemy 
+                                    END AS name_enemy, 
+                                    ca.chat_inside, 
+                                    TO_CHAR(ca.entry_date, 'HH24-MI') entry_date
+                                from conversation ion  left JOIN chat ca
+                                    ON ion.conversation_id = ca.conversation_id
+                                WHERE (ca.entry_date = (
+                                    SELECT MAX(cab.entry_date) from chat cab 
+                                    where cab.conversation_id = ion.conversation_id
+                                    )
+                                    OR ca.entry_date IS null)
+                                    and (ion.NAME = %(username)s or ion.name_enemy = %(username)s)
+                                    and ion.conversation_id  <> case when 
+                                            ion.name_enemy = %(username)s 
+                                        and
+                                            ion.name != %(username)s
+                                        and
+                                            ca.chat_inside is null
+                                        then ion.conversation_id 
+                                        else 'aman'
+                                        end
+                                    order BY CASE WHEN  ca.entry_date IS not NULL THEN ca.entry_date 
+												ELSE ion.entry_date end desc
+                                                """ 
+                    params = {'username': user}
+                    hasil_check = await Sqlbuilder.Select('Mchat', query, params)
+                    await websocket.send(json.dumps(hasil_check, default=str)) 
+                    for values in hasil_check['data']:
+                        print(f"chat_channel_{values['conversation_id']}")
+
+                        bound_callback = functools.partial(show_chat, user = user, websocket = websocket, Sqlbuilder = Sqlbuilder)
+                        
+                        await Sqlbuilder.Conn['Mchat'].add_listener(f"chat_channel_{values['conversation_id']}", bound_callback)
+
+                    bound_callback = functools.partial(show_chat, user = user, websocket = websocket, Sqlbuilder = Sqlbuilder)
+                    await Sqlbuilder.Conn['Mchat'].add_listener(f"chat_channel_{user}", bound_callback)
+
+                    while True:
+                        await asyncio.sleep(3600)
+
+                    
         else:
             await websocket.send(json.dumps(CheckConn, default=str)) 
             raise Exception(CheckConn)

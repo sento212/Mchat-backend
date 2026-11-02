@@ -11,7 +11,7 @@ async def handler(websocket, path):
         parsed_url = urlparse(path)
         params = parse_qs(parsed_url.query)
         token = params.get('Authorization', 400)[0]
-        url = "https://sento-hamma.duckdns.org/backend/DaftarLogin"
+        url = "http://127.0.0.1:5000/DaftarLogin"
         payload = {'token': token}
         response = requests.request("POST", url, data=payload)
         if(json.loads(response.text)['status'] == 200): 
