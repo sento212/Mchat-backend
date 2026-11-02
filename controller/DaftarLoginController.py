@@ -2,10 +2,11 @@ from dao.daftar_DAO import daftar_login
 from flask import request
 import traceback
 from settings.caches import load_from_file
+from settings.DAO_builder import Dao_builder
 
 class daftarloginController:
 
-    def POST(self, *args, **kwargs):
+    async def POST(self, *args, **kwargs):
         try:
             caches = load_from_file("list_token")
             token = request.form.get('token',None)
@@ -28,8 +29,11 @@ class daftarloginController:
                 'status' : 400,
                 'message' : "Gagal mendapatkan data" 
                 } 
+        finally:
+                    Sqlbuilder = Dao_builder()
+                    await Sqlbuilder.close_conn()
 
-    def PUT(self, *args, **kwargs):
+    async def PUT(self, *args, **kwargs):
         try:
             print(12, 'yeah')
             name = request.form.get('user',None)
@@ -39,7 +43,7 @@ class daftarloginController:
                     'status' : 400,
                     'message' : "Username atau Password kosong" 
                     } 
-            hasil = daftar_login(name,Pass)
+            hasil = await daftar_login(name,Pass)
             if(hasil['status'] == 400):
                 return hasil
             return hasil
@@ -53,3 +57,6 @@ class daftarloginController:
                 'status' : 400,
                 'message' : "Gagal request API" 
                 } 
+        finally:
+            Sqlbuilder = Dao_builder()
+            await Sqlbuilder.close_conn()

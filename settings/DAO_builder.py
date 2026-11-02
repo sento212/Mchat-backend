@@ -1,15 +1,25 @@
 from settings.conn import Conn
 import inspect
 import asyncio
+import re
+import json
 
 
 class Dao_builder:
 
-    def __init__(self,connection_list):
-        Chatconn = Conn('152.42.226.71','postgres','cfu800212','Mchat', '5432')
+    def __init__(self): 
         self.Conn = {}
+        self.cheking = {}
+
+    async def close_conn(self):
+        for key , value  in self.Conn.items():
+            await value.close()
+
+
+    async def get_conn(self, connection_list):
+        Chatconn = Conn('localhost','sento','cfu800212345','mchat', '5555')
         if 'Mchat' in connection_list:
-            hasil = Chatconn.get_conn()
+            hasil = await Chatconn.get_conn()
             if hasil['status'] == 200:
                 self.Conn['Mchat'] = hasil['data']
             else:
@@ -23,21 +33,40 @@ class Dao_builder:
             self.cheking = {
                 'status' : 200,
                 'message' : 'Connection sacure'
-            }
+            }    
+
+        return self.cheking
+
 
     def ConnTest(self):
         return self.cheking
     
-    def Select(self, Conn, querry, param):
+    async def Select(self, Conn, querry, param = None):
         try:
             if Conn in self.Conn:
-                cur = self.Conn[Conn].cursor()
-                cur.execute(querry, param)
-                data = cur.fetchall()
-                hasil = []
-                for coldata in data:
-                    hasil.append({col[0] : coldata[key] for key, col in enumerate(cur.description)})
+                cur = self.Conn[Conn]
+                if isinstance(param, dict): 
 
+                    keys = re.findall(r'%\((.*?)\)s', querry)
+                    
+                    # Replace %(key)s with asyncpg's $1, $2, $3...
+                    for index, key in enumerate(keys, start=1):
+                        querry = querry.replace(f"%({key})s", f"${index}", 1)
+                    
+                    # Extract values in the exact order they appear in the query
+                    values = tuple(param[key] for key in keys)
+                    rows = await cur.fetch(querry, *values)
+                elif isinstance(param, (list, tuple)):
+                    counter = 1
+                    while '%s' in querry:
+                        querry = querry.replace('%s', f'${counter}', 1)
+                        counter += 1
+                    rows = await cur.fetch(querry, *param)
+                else:
+                    rows = await cur.fetch(querry)
+
+                hasil = [dict(row) for row in rows]
+                print(hasil)
                 return {
                     'status' : 200,
                     'message' : 'Select data berhasil',
@@ -53,12 +82,30 @@ class Dao_builder:
             'message' : 'An Error Accured'
             } 
         
-    def ExecuteCommit(self, Conn, querry, param):
+    async def ExecuteCommit(self, Conn, querry, param):
         try:
             if Conn in self.Conn:
-                cur = self.Conn[Conn].cursor()
-                cur.execute(querry, param)
-                self.Conn[Conn].commit()
+                cur = self.Conn[Conn]
+                if isinstance(param, dict): 
+
+                    keys = re.findall(r'%\((.*?)\)s', querry)
+                    
+                    # Replace %(key)s with asyncpg's $1, $2, $3...
+                    for index, key in enumerate(keys, start=1):
+                        querry = querry.replace(f"%({key})s", f"${index}", 1)
+                    
+                    # Extract values in the exact order they appear in the querry
+                    values = tuple(param[key] for key in keys)
+                    await cur.fetchrow(querry, *values)
+
+                elif isinstance(param, (list, tuple)):
+                                    counter = 1
+                                    while '%s' in querry:
+                                        querry = querry.replace('%s', f'${counter}', 1)
+                                        counter += 1
+                                    rows = await cur.fetchrow(querry, *param)
+                else:
+                    await cur.fetchrow(querry)
                 return {
                     'status' : 200,
                     'message' : 'Execute data berhasil'
@@ -72,47 +119,10 @@ class Dao_builder:
                 'status' : 400,
                 'message' : 'An Error Accured'
                 } 
-                                 
-    def ExecuteNoCommit(self, Conn, querry, param):
+                                        
+    async def Rollback(self, Conn):
         try:
             if Conn in self.Conn:
-                cur = self.Conn[Conn].cursor()
-                cur.execute(querry, param)
-                return {
-                    'status' : 200,
-                    'message' : 'Execute data berhasil'
-                }
-            else:
-                raise Exception("No Connection detected")
-        except Exception as e:
-            caller_frame = inspect.stack()[1]
-            print(f"you have error in you sql syntax {e} on {caller_frame.filename} at line {caller_frame.lineno}")  
-            return {
-            'status' : 400,
-            'message' : 'An Error Accured'
-            } 
-        
-    def Commit(self, Conn):
-        try:
-            if Conn in self.Conn:
-                self.Conn[Conn].commit()
-                return {
-                    'status' : 200,
-                    'message' : 'Execute data berhasil'
-                }
-            else:
-                raise Exception("No Connection detected") 
-        except Exception as e:
-            print(e)  
-            return {
-            'status' : 400,
-            'message' : 'An Error Accured'
-            }  
-    
-    def Rollback(self, Conn):
-        try:
-            if Conn in self.Conn:
-                self.Conn[Conn].rollback()
                 return {
                     'status' : 200,
                     'message' : 'Execute data berhasil'
@@ -126,24 +136,10 @@ class Dao_builder:
             'message' : 'An Error Accured'
             }  
 
-    async def AsyncronusCall(self,tipe,database,querry,param):
-        try:
-            caller_frame = inspect.stack()[1]
-            if hasattr(Dao_builder, tipe):
-                calling = getattr(self, tipe)
-                hasil =  await asyncio.to_thread(calling,database, querry, param)
-                if hasil == 400:
-                    raise Exception("No Connection detected") 
-                return hasil
-            else:
-                raise Exception(f"No action name {tipe} in builder")
-        except Exception as e:
-            print(e)
-            caller_frame = inspect.stack()[1]
-            print(f"you have error in you sql syntax {e} on {caller_frame.filename} at line {caller_frame.lineno}")    
-            return {
-            'status' : 400,
-            'message' : 'An Error Accured'
-            } 
+
+
+
+
+
 
         
