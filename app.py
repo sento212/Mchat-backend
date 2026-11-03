@@ -26,7 +26,7 @@ cache = Cache(app)
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>', methods=['GET','POST','DELETE','PUT'])
 # @cache.cached(timeout=None)
-def run(path):
+async def run(path):
     try:
         token = request.headers.get('Authorization', None)
         if token != None:
@@ -34,21 +34,21 @@ def run(path):
             caches = load_from_file("list_token")
             token = token[7:]  
             if(caches.index(token)):      
-                hasil = routing.Run(path = path,route = request.method, cache = cache)
+                hasil = await routing.Run(path = path,route = request.method, cache = cache)
                 return hasil
         else:
-            hasil = routing.Run(path = path,route = request.method, cache = cache)
+            hasil = await routing.Run(path = path,route = request.method, cache = cache)
             return hasil
     except Exception as e:
         print(e)
         return {
                 'status' : 400,
-                'message' : "Token Expired" ,
+                'message' : f"Token Expired {e}" ,
                 } 
 
     
-# if __name__ == '__main__':
-#     # flask_thread = threading.Thread(target=app.run)
-#     # flask_thread.start()
-#     # asyncio.run(main())
-#     app.run(debug=True, host='0.0.0.0')
+if __name__ == '__main__':
+    # flask_thread = threading.Thread(target=app.run)
+    # flask_thread.start()
+    # asyncio.run(main())
+    app.run(debug=True, host='0.0.0.0')

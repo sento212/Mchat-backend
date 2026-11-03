@@ -4,10 +4,11 @@ import traceback
 from flask_jwt_extended import create_access_token
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from settings.caches import save_to_file, load_from_file
+from settings.DAO_builder import Dao_builder
 
 class loginController:
 
-    def POST(self, *args, **kwargs):
+    async def POST(self, *args, **kwargs):
         try:
             caches = load_from_file("list_token")
             name = request.form.get('user',None)
@@ -19,7 +20,8 @@ class loginController:
                     'message' : "Username atau Password kosong" 
                     } 
             acess_token = create_access_token(identity={'user' : name, 'login_status' : True})
-            hasil = login_data(name,Pass,acess_token)
+            hasil = await login_data(name,Pass,acess_token)
+
             if(hasil['status'] == 400):
                 return hasil
             if(caches != None):
@@ -39,11 +41,13 @@ class loginController:
                 'status' : 400,
                 'message' : "Gagal mendapatkan data" 
                 } 
+        finally:
+                    Sqlbuilder = Dao_builder()
+                    await Sqlbuilder.close_conn()
     
-    @jwt_required()
-    def DELETE(self, *args, **kwargs):
+
+    async def DELETE(self, *args, **kwargs):
         try:
-            current_user = get_jwt_identity()
             token = request.headers.get('Authorization')
             token = token[7:]  
             caches = load_from_file("list_token")
@@ -66,3 +70,6 @@ class loginController:
                 'status' : 400,
                 'message' : "Gagal Logout" 
                 } 
+        finally:
+            Sqlbuilder = Dao_builder()
+            await Sqlbuilder.close_conn()

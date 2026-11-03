@@ -1,15 +1,15 @@
 from settings.DAO_builder import Dao_builder
 import hashlib
 
-def daftar_login(name,Pass):
-    Sqlbuilder = Dao_builder(['Mchat'])
-    CheckConn = Sqlbuilder.ConnTest()
+async def daftar_login(name,Pass):
+    Sqlbuilder = Dao_builder()
+    CheckConn = await Sqlbuilder.get_conn(['Mchat'])
     if(CheckConn['status'] == 200):
         query = """select count(username) jml from userdata where username = %(username)s """ 
         params = {'username': name}
-        hasil_check = Sqlbuilder.Select('Mchat', query, params)
+        hasil_check = await Sqlbuilder.Select('Mchat', query, params)
         if(hasil_check['status'] == 400):
-            Sqlbuilder.Rollback('Mchat')
+            await Sqlbuilder.Rollback('Mchat')
             raise Exception(hasil_check['message'])
 
 
@@ -20,9 +20,9 @@ def daftar_login(name,Pass):
             query = """Insert into userdata(username,password) 
                         values (%(username)s,%(password)s)""" 
             params = {'username': name,'password': Pass}
-            hasil = Sqlbuilder.ExecuteCommit('Mchat', query, params)
+            hasil = await Sqlbuilder.ExecuteCommit('Mchat', query, params)
             if(hasil['status'] == 400):
-                Sqlbuilder.Rollback('Mchat')
+                await Sqlbuilder.Rollback('Mchat')
                 raise Exception(hasil['message'])
             return hasil
         else:
