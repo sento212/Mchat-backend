@@ -26,6 +26,7 @@ class Router:
                 intence = getattr(module,obj)
                 if hasattr(intence(),method):
                     request = getattr(intence(),method)
+                    print("dqwdqwd")
                     return await request(cache = cache)
                 else:
                     return {

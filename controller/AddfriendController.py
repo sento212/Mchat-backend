@@ -1,6 +1,8 @@
 from dao.add_friend_DAO import daftar_temen, show_temen, dafter_temen_bener, addshow
 from flask import request 
 from flask_jwt_extended import jwt_required, get_jwt_identity
+# from quart import request
+# from quart_jwt_extended import jwt_required, get_jwt_identity
 import jwt, sys, asyncio,traceback, json
 from urllib.parse import urlparse, parse_qs
 from settings.DAO_builder import Dao_builder
@@ -10,8 +12,13 @@ class addFriendController:
     @jwt_required()
     async def PUT(self ,*args, **kwargs):
         try:
-            current_user = get_jwt_identity()
-            main_user = current_user['user']
+            auth_header = request.headers.get('Authorization')
+            if not auth_header or not auth_header.startswith('Bearer '):
+                return {'status': 400, 'message': 'Missing or invalid token'}
+                
+            token = auth_header.split(' ')[1]
+            payload = jwt.decode(token, 'your-secret-key', algorithms=['HS256'])
+            main_user = payload['sub']['user']
             name_temen = request.form.get('name_temen',None)
             hasil = await daftar_temen(main_user,name_temen)
             if(hasil['status'] == 400):
@@ -30,11 +37,16 @@ class addFriendController:
             Sqlbuilder = Dao_builder()
             await Sqlbuilder.close_conn()
         
-    @jwt_required()
     async def GET(self, *args, **kwargs):
         try:
-            current_user = get_jwt_identity()
-            main_user = current_user['user']
+            auth_header = request.headers.get('Authorization')
+            if not auth_header or not auth_header.startswith('Bearer '):
+                return {'status': 400, 'message': 'Missing or invalid token'}
+                
+            token = auth_header.split(' ')[1]
+            payload = jwt.decode(token, 'your-secret-key', algorithms=['HS256'])
+            main_user = payload['sub']['user']
+            
             cari = request.args.get('cari',None)
             hasil = await show_temen(main_user, cari)
             if(hasil['status'] == 400):

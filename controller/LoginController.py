@@ -45,10 +45,9 @@ class loginController:
                     Sqlbuilder = Dao_builder()
                     await Sqlbuilder.close_conn()
     
-    @jwt_required()
+
     async def DELETE(self, *args, **kwargs):
         try:
-            current_user = get_jwt_identity()
             token = request.headers.get('Authorization')
             token = token[7:]  
             caches = load_from_file("list_token")

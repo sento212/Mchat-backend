@@ -43,7 +43,7 @@ async def run(path):
         print(e)
         return {
                 'status' : 400,
-                'message' : "Token Expired" ,
+                'message' : f"Token Expired {e}" ,
                 } 
 
     

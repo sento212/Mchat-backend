@@ -107,54 +107,63 @@ async def addshow(websocket,user):
                 message = json.loads(message)
                 if(message['tipe'] == 'put'):
                     nama_temen = message['nama_temen']
-                    query = """select count(name_enemy) jml from conversation where name = %(username)s and name_enemy =%(userenemy)s  """ 
-                    params = {'username': user,'userenemy': nama_temen}
+                    query = """select count(1) jml from userdata u where u.username = %(userenemy)s  """ 
+                    params = {'userenemy': nama_temen}
                     hasil_check = await Sqlbuilder.Select('Mchat', query, params)
-                    if(hasil_check['data'][0]['jml'] == 0):
-                        hasil_check = Sqlbuilder.Select('Mchat', query, params)
-                        convid = "comvid_"+str(datetime.now())
-                        query = """Insert into Conversation(name,name_enemy,conversation_id) 
-                                    values (%(name)s,%(name_enemy)s,%(convid)s)""" 
-                        params = {'name': user,'name_enemy': nama_temen, 'convid' : convid}
-                        hasil = await Sqlbuilder.ExecuteCommit('Mchat', query, params)
-                        if(hasil['status'] == 200):
-                            bound_callback = functools.partial(show_chat, user = user, websocket = websocket, Sqlbuilder = Sqlbuilder)
-                            await Sqlbuilder.Conn['Mchat'].add_listener(f"chat_channel_{convid}", bound_callback)
+                    if(hasil_check['data'][0]['jml'] != 0):
+                        query = """select count(name_enemy) jml from conversation 
+                                    where (name = %(username)s and name_enemy =%(userenemy)s) or (name = %(userenemy)s and name_enemy =%(username)s)""" 
+                        params = {'username': user,'userenemy': nama_temen}
+                        hasil_check = await Sqlbuilder.Select('Mchat', query, params)
+                        if(hasil_check['data'][0]['jml'] == 0):
+                            hasil_check = Sqlbuilder.Select('Mchat', query, params)
+                            convid = "comvid_"+str(datetime.now())
+                            query = """Insert into Conversation(name,name_enemy,conversation_id) 
+                                        values (%(name)s,%(name_enemy)s,%(convid)s)""" 
+                            params = {'name': user,'name_enemy': nama_temen, 'convid' : convid}
+                            hasil = await Sqlbuilder.ExecuteCommit('Mchat', query, params)
+                            if(hasil['status'] == 200):
+                                bound_callback = functools.partial(show_chat, user = user, websocket = websocket, Sqlbuilder = Sqlbuilder)
+                                await Sqlbuilder.Conn['Mchat'].add_listener(f"chat_channel_{convid}", bound_callback)
 
-                            query = """SELECT ion.conversation_id, 
-                                            case when 
-                                                ion.name_enemy = %(username)s 
-                                            THEN ion.name 
-                                            ELSE ion.name_enemy 
-                                            END AS name_enemy, 
-                                            ca.chat_inside, 
-                                            TO_CHAR(ca.entry_date, 'HH24-MI') entry_date
-                                        from conversation ion  left JOIN chat ca
-                                            ON ion.conversation_id = ca.conversation_id
-                                        WHERE (ca.entry_date = (
-                                            SELECT MAX(cab.entry_date) from chat cab 
-                                            where cab.conversation_id = ion.conversation_id
-                                            )
-                                            OR ca.entry_date IS null)
-                                            and (ion.NAME = %(username)s or ion.name_enemy = %(username)s)
-                                            and ion.conversation_id  <> case when 
+                                query = """SELECT ion.conversation_id, 
+                                                case when 
                                                     ion.name_enemy = %(username)s 
+                                                THEN ion.name 
+                                                ELSE ion.name_enemy 
+                                                END AS name_enemy, 
+                                                ca.chat_inside, 
+                                                TO_CHAR(ca.entry_date, 'HH24-MI') entry_date
+                                            from conversation ion  left JOIN chat ca
+                                                ON ion.conversation_id = ca.conversation_id
+                                            WHERE (ca.entry_date = (
+                                                SELECT MAX(cab.entry_date) from chat cab 
+                                                where cab.conversation_id = ion.conversation_id
+                                                )
+                                                OR ca.entry_date IS null)
+                                                and (ion.NAME = %(username)s or ion.name_enemy = %(username)s)
+                                                and ion.conversation_id  <> case when 
+                                                        ion.name_enemy = %(username)s 
+                                                        and
+                                                    ion.name != %(username)s  
                                                     and
-	    								        ion.name != %(username)s  
-                                                and
-                                                    ca.chat_inside is null
-                                                then ion.conversation_id 
-                                                else 'aman'
-                                                end
-                                            order BY CASE WHEN  ca.entry_date IS not NULL THEN ca.entry_date 
-                                                        ELSE ion.entry_date end desc""" 
-                            params = {'username': user}
-                            hasil_check = await Sqlbuilder.Select('Mchat', query, params)
-                            await websocket.send(json.dumps(hasil_check, default=str))
+                                                        ca.chat_inside is null
+                                                    then ion.conversation_id 
+                                                    else 'aman'
+                                                    end
+                                                order BY CASE WHEN  ca.entry_date IS not NULL THEN ca.entry_date 
+                                                            ELSE ion.entry_date end desc""" 
+                                params = {'username': user}
+                                hasil_check = await Sqlbuilder.Select('Mchat', query, params)
+                                hasil_check_Extra = {'status' : 201, 'message' : "select data berhasil"}
+                                await websocket.send(json.dumps(hasil_check_Extra, default=str))
+                                await websocket.send(json.dumps(hasil_check, default=str))
+                        else:
+                            hasil_check = {'status' : 400, 'message' : "akun sudah berteman!!!"}
+                            await websocket.send(json.dumps(hasil_check, default=str))  
                     else:
-                        hasil_check = {'status' : 400, 'message' : "akun sudah berteman!!!"}
-                        await websocket.send(json.dumps(hasil_check, default=str))  
-                        
+                        hasil_check = {'status' : 400, 'message' : "akun tidak ada!!!"}
+                        await websocket.send(json.dumps(hasil_check, default=str))      
                 elif(message['tipe'] == 'get'):
                     query = """SELECT ion.conversation_id, 
                                     case when 
